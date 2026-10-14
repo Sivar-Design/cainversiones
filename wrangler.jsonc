@@ -1,0 +1,10 @@
+// Despliegue en Cloudflare Workers (solo archivos estáticos, sin código).
+{
+  "name": "cainversiones",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./site",
+    // Muestra site/404.html en URLs que no existen
+    "not_found_handling": "404-page"
+  }
+}

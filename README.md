@@ -60,7 +60,13 @@ La descarga desde Wayback corre en GitHub Actions
 (`.github/workflows/wayback-fetch.yml`) porque el entorno de trabajo no tiene
 acceso directo a web.archive.org.
 
-## Publicar en Cloudflare Pages
+## Publicación temporal
+
+Cloudflare Workers (solo archivos estáticos): https://cainversiones.miguel-0e2.workers.dev/
+La configuración está en `wrangler.jsonc` (carpeta `site/`, página 404 propia;
+`site/_redirects` manda las URLs antiguas a las páginas de 2018).
+
+### Alternativa: Cloudflare Pages
 
 Workers & Pages → Create → Pages → Connect to Git → `Sivar-Design/cainversiones`
 
