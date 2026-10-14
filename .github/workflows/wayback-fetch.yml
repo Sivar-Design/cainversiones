@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - "tools/wayback_fetch.py"
+      - "tools/wayback_*.py"
       - ".github/workflows/wayback-fetch.yml"
 
 permissions:
@@ -21,6 +21,7 @@ jobs:
           python-version: "3.12"
       - run: pip install requests
       - run: python tools/wayback_fetch.py archive-raw
+      - run: python tools/wayback_deps.py archive-raw
       - name: Commit resultado
         run: |
           git config user.name "github-actions[bot]"
