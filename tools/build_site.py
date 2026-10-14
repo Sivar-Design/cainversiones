@@ -9,8 +9,9 @@
   siguiendo también los url() dentro de los CSS.
 - El formulario de contacto de Divi se convierte en mailto: (no hay PHP).
 """
-import glob, os, re, shutil, sys
+import glob, json, os, re, shutil, sys
 from urllib.parse import urlsplit, unquote, urljoin
+from PIL import Image, ImageDraw, ImageFont
 
 RAW = "archive-raw"
 OUT = "site"
@@ -22,6 +23,52 @@ PAGES = ["index.html",
 HOST_RE = r"(?:https?:)?(?:\\?/\\?/)(?:www\.)?cainversiones\.com(?::80)?"
 
 missing = set()
+placeholders = set()
+SUST = json.load(open("tools/static/sustituciones.json", encoding="utf-8"))["sustituciones"]
+RECON_CSS = "/assets/css/reconstruccion-2018.css"
+THUMB = re.compile(r"-(\d+)x(\d+)(\.\w+)$")
+
+def placeholder(size):
+    """Imagen de marca para fotos que no existen en ningún archivo."""
+    w, h = size
+    im = Image.new("RGB", size, (239, 239, 239))
+    logo = Image.open(os.path.join(RAW, "wp-content/uploads/2018/03/Logo-Cromeyer-Avila-2018-wide.png")).convert("RGBA")
+    lw = int(w * 0.5)
+    logo = logo.resize((lw, int(logo.height * lw / logo.width)), Image.LANCZOS)
+    im.paste(logo, ((w - lw) // 2, int(h * 0.38) - logo.height // 2), logo)
+    try:
+        font = ImageFont.truetype("DejaVuSans.ttf", max(12, w // 32))
+    except OSError:
+        font = ImageFont.load_default()
+    txt = "Fotografía no disponible"
+    d = ImageDraw.Draw(im)
+    tw = d.textlength(txt, font=font)
+    d.text(((w - tw) / 2, int(h * 0.62)), txt, fill=(150, 150, 150), font=font)
+    return im
+
+def recover_image(path, dest):
+    """Imagen de 2018 que Wayback no guardó: sustituye con la misma obra de
+    versiones anteriores, recorta miniaturas, o genera un placeholder."""
+    m = THUMB.search(path)
+    base = THUMB.sub(r"\3", path) if m else path
+    if base in SUST:
+        im = Image.open(os.path.join(RAW, SUST[base])).convert("RGB")
+    elif not m:
+        im = None
+    else:
+        base_src = find_raw(base)
+        im = Image.open(base_src).convert("RGB") if base_src else None
+    if im is None:
+        placeholders.add(base)
+        im = placeholder((1200, 852))
+    if m:  # miniatura recortada al centro, como hace WordPress
+        tw, th = int(m.group(1)), int(m.group(2))
+        scale = max(tw / im.width, th / im.height)
+        im = im.resize((round(im.width * scale), round(im.height * scale)), Image.LANCZOS)
+        l, t = (im.width - tw) // 2, (im.height - th) // 2
+        im = im.crop((l, t, l + tw, t + th))
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    im.save(dest, quality=85)
 
 def find_raw(path):
     """Ruta en archive-raw para una ruta web (sin query). Acepta variantes
@@ -39,10 +86,15 @@ def find_raw(path):
 def copy_asset(path):
     """Copia un asset a site/ y, si es CSS, procesa sus url()."""
     path = urlsplit(path).path
+    if path.startswith("/assets/"):
+        return  # archivos propios de la reconstrucción
     dest = os.path.join(OUT, unquote(path).lstrip("/"))
     if os.path.exists(dest):
         return
     src = find_raw(path)
+    if not src and path.startswith("/wp-content/uploads/") and re.search(r"\.(jpe?g|png)$", path, re.I):
+        recover_image(path, dest)
+        return
     if not src:
         missing.add(path)
         return
@@ -109,12 +161,28 @@ document.querySelectorAll('form.et_pb_contact_form').forEach(function (form) {
 </script>
 """ % EMAIL
 
+def global_customizer_css():
+    """/proyectos-vendidos/ se archivó con el CSS global del personalizador de
+    Divi en línea. Es el mismo para todo el sitio: se reutiliza en las demás."""
+    t = open(os.path.join(RAW, "proyectos-vendidos/index.html"), encoding="utf-8").read()
+    return re.search(r'<style id="et-divi-customizer-global-cached-inline-styles">.*?</style>', t, re.S).group(0)
+
 def build_page(rel):
     html = open(os.path.join(RAW, rel), encoding="utf-8").read()
+    if "et-divi-customizer-global-cached-inline-styles" not in html:
+        html = html.replace('<link rel="stylesheet" id="et-core-unified-cached-inline-styles"',
+                            global_customizer_css() + '\n<link rel="stylesheet" id="et-core-unified-cached-inline-styles"')
     for pat in REMOVE:
         html = re.sub(pat, "", html, flags=re.S)
     html = re.sub(r'\s+onerror="et_core_page_resource_fallback\(this, true\)" onload="et_core_page_resource_fallback\(this\)"', "", html)
     html = rewrite_urls(html)
+    # El CSS por página de Divi (et-core-unified) no se archivó: estilos reconstruidos
+    html = re.sub(r"/wp-content/cache/et/\d+/et-core-unified-\d+\.min\.css", RECON_CSS, html)
+    # La vista nocturna de Altea no existe en ningún archivo: se quita del
+    # slider para que abra con la foto real (en la galería de proyectos
+    # vendidos los faltantes se dejan como placeholder para conservar la lista).
+    html = re.sub(r'<div class="et_pb_gallery_item et_pb_bg_layout_light">\s*<div class=\'et_pb_gallery_image landscape\'>\s*'
+                  r'<a href="/wp-content/uploads/2018/05/Condominio-Altea-vista-nocturna[^"]*".*?</a>\s*</div></div>', "", html, flags=re.S)
     # Formulario de búsqueda y de contacto sin backend
     html = html.replace('class="et-search-form" action="/"', 'class="et-search-form" action="#"')
     html = re.sub(r'(<form class="et_pb_contact_form clearfix" method="post" action=")[^"]*"', r'\1#"', html)
@@ -144,8 +212,14 @@ if __name__ == "__main__":
         build_page(p)
     for extra in ["/favicon.ico"]:
         copy_asset(extra)
+    os.makedirs(os.path.join(OUT, "assets/css"), exist_ok=True)
+    shutil.copyfile("tools/static/reconstruccion-2018.css", os.path.join(OUT, RECON_CSS.lstrip("/")))
+    for u in re.findall(r"url\(['\"]?(/[^'\")]+)", open("tools/static/reconstruccion-2018.css").read()):
+        copy_asset(u)
     shutil.copyfile("tools/static/_redirects", os.path.join(OUT, "_redirects"))
     shutil.copyfile("tools/static/404.html", os.path.join(OUT, "404.html"))
+    if placeholders:
+        print("Placeholder (sin foto en ningún archivo):", *sorted(placeholders), sep="\n  ")
     if missing:
         print("No encontrados en el archivo:", *sorted(missing), sep="\n  ")
     n = sum(len(f) for _, _, f in os.walk(OUT))

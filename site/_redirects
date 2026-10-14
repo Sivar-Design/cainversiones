@@ -1,0 +1,16 @@
+# URLs de versiones anteriores del sitio (2010-2017) hacia las páginas de 2018
+/proyectos/                    /proyectos-vendidos/  301
+/proyectos                     /proyectos-vendidos/  301
+/portfolio/*                   /proyectos-vendidos/  301
+/condominio-murano/            /proyectos-vendidos/  301
+/condominio-niza/              /proyectos-vendidos/  301
+/condominio-palermo/           /proyectos-vendidos/  301
+/condominio-arboledas-de-la-escalon/  /proyectos-vendidos/  301
+/category/*                    /proyectos-vendidos/  301
+/tag/*                         /proyectos-vendidos/  301
+/contact/                      /  301
+/contact                       /  301
+/sample-page/                  /  301
+/author/*                      /  301
+/2010/*                        /  301
+/ca/*                          /  301

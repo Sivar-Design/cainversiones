@@ -20,7 +20,28 @@ Sirve de punto de partida para el rediseño.
 - `/torre-paseo-alto-colonia-escalon-san-salvador/` — Torre Paseo Alto
 - `/proyectos-vendidos/` — Proyectos vendidos (galería de 34 proyectos)
 
-## Diferencias con el original
+## Qué es original y qué es reconstrucción
+
+**Original (tal cual del archivo):** HTML y textos de las 4 páginas, tema Divi
+3.0.103 (CSS/JS/fuentes de íconos), CSS global del personalizador de Divi
+(colores, tipografías Ropa Sans/Montserrat, cabecera y pie cobre `#b37647`),
+logotipos, fotos de Altea y Torre Paseo Alto, fondos de 2018.
+
+**Reconstruido:**
+
+- `tools/static/reconstruccion-2018.css` — Wayback no guardó el CSS por
+  módulo de Home, Altea y Torre Paseo Alto (`et-core-unified-*.min.css`).
+  Se aproximó con los colores y fondos originales de 2018.
+- Fotos de proyectos vendidos — 26 de 34 no se archivaron en su versión de 2018;
+  se usan las mismas obras desde versiones anteriores del sitio (2010–2014,
+  ver `tools/static/sustituciones.json`).
+- 8 proyectos sin foto en ningún archivo (Torre Spazio, San Benito 21,
+  Portofino, La Capilla 560, Villas de San Michelle, Torre del Paseo I,
+  Bella Vista, Los Castaños) muestran un placeholder de marca.
+- La vista nocturna de Altea (galería) no existe en ningún archivo: se quitó
+  del slider.
+
+## Otras diferencias con el original
 
 - El formulario de contacto de Divi necesitaba PHP. Ahora abre el correo del
   visitante con el mensaje dirigido a `info@cainversiones.com`.
